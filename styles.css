@@ -6,7 +6,7 @@ body {
   min-height: 100vh;
   color: #fff;
   /* Background image - using your PNG placed in `assets/` */
-  background-image: url('assets/corkboard final.png');
+  background-image: url('assets/corkboard-final.png');
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
