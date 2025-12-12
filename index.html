@@ -2,19 +2,95 @@
 <html>
 <head>
 <style>
-    html {
-        background: url('hallway.png') no-repeat center center fixed;
-        background-size: cover;
-    }
     body {
-        background: transparent;
         margin: 0;
-        padding: 20px;
-        font-family: sans-serif;
+        background: black;
+        overflow: hidden;
+    }
+
+    /* Visible scene */
+    #scene {
+        width: 100vw;
+        height: auto;
+        display: block;
+        user-select: none;
+        -webkit-user-drag: none;
+    }
+
+    /* Base overlay style for all highlight images */
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: auto;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease-in-out;
+        user-select: none;
+        -webkit-user-drag: none;
     }
 </style>
 </head>
 <body>
+
+<!-- Visible hallway -->
+<img id="scene" src="hallway.png">
+
+<!-- Hidden color map -->
+<img id="mask" src="clickmap.png" style="display:none;">
+
+<!-- Highlight overlays -->
+<img id="highlightdoor" class="overlay" src="HiDoor.png">
+<img id="highlightshelf" class="overlay" src="HiShelf.png">
+<img id="highlightboard" class="overlay" src="HiCork.png">
+
+<script>
+const scene = document.getElementById("scene");
+const mask = document.getElementById("mask");
+
+const highlightDoor = document.getElementById("highlightdoor");
+const highlightShelf = document.getElementById("highlightshelf");
+const highlightBoard = document.getElementById("highlightboard");
+
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
+
+mask.onload = () => {
+    canvas.width = mask.width;
+    canvas.height = mask.height;
+    ctx.drawImage(mask, 0, 0);
+};
+
+scene.addEventListener("mousemove", (e) => {
+    const rect = scene.getBoundingClientRect();
+
+    // mouse cords to mask
+    const x = Math.floor((e.clientX - rect.left) * (mask.width / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (mask.height / rect.height));
+
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    const color = `${pixel[0]},${pixel[1]},${pixel[2]}`;
+
+    // Reset all overlays
+    highlightDoor.style.opacity = 0;
+    highlightShelf.style.opacity = 0;
+    highlightBoard.style.opacity = 0;
+
+
+    if (color === "255,255,0") {
+        highlightDoor.style.opacity = 1;
+    }
+
+    if (color === "0,255,0") {
+        highlightShelf.style.opacity = 1;
+    }
+
+    if (color === "255,0,0") {
+        highlightBoard.style.opacity = 1;
+    }
+});
+</script>
 
 </body>
 </html>
