@@ -39,20 +39,38 @@
         transition: opacity 0.2s ease-in-out;
         z-index: 2;
     }
+
+    /* tilted text style */
+    .note {
+        position: absolute;
+        top: 40%;      /* vertically */
+        left: 30%;     /* horizontally */
+        color: black;
+        font-size: 24px;
+        font-family: "Comic Sans MS", sans-serif;
+        background: #fff8a8;
+        padding: 10px 15px;
+        border-radius: 4px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        transform: rotate(-8deg); /* tilt */
+        z-index: 3; /* above the board */
+    }
 </style>
 </head>
 <body>
- // PUT THE UHHH PNG SHITS HERE in this order: background, click map, and then highlights
+
 <div id="container">
     <img id="scene" class="layer" src="corkboardwithbutton.png">
     <img id="mask" class="layer" src="boardmap.png" style="display:none;">
     <img id="highlightback" class="layer overlay" src="HiBack.png">
+
+    <!-- TEXT -->
+    <div class="note">TESTETSTETETST</div>
 </div>
 
 <script>
 const scene = document.getElementById("scene");
 const mask = document.getElementById("mask");
- // remove highlights as nessratyryey
 const highlightback = document.getElementById("highlightback");
 
 const canvas = document.createElement("canvas");
@@ -74,12 +92,12 @@ scene.addEventListener("mousemove", (e) => {
 
     const pixel = ctx.getImageData(x, y, 1, 1).data;
     currentColor = `${pixel[0]},${pixel[1]},${pixel[2]}`;
- // REMEMBER TO EDIT THE HIGHLIGHTS!!!!!
+
     highlightback.style.opacity = 0;
- // uhhh the fucking uh the map highlight logic
+
     if (currentColor === "255,255,0") highlightback.style.opacity = 1;
 });
- // Clicky logic
+
 scene.addEventListener("click", (e) => {
     const rect = scene.getBoundingClientRect();
 
@@ -89,7 +107,6 @@ scene.addEventListener("click", (e) => {
     const pixel = ctx.getImageData(x, y, 1, 1).data;
     const clickedColor = `${pixel[0]},${pixel[1]},${pixel[2]}`;
 
-    // Clicky click editor!!! PS: yellow is 255,255,0
     if (clickedColor === "255,255,0") {
         window.location.href = "index.html";
     }
