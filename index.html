@@ -2,55 +2,54 @@
 <html>
 <head>
 <style>
-    body {
+    html, body {
         margin: 0;
+        padding: 0;
         background: black;
+        height: 100%;
+        width: 100%;
         overflow: hidden;
     }
 
-    /* Shared layout */
+    /* The container centers and scales everything */
+    #container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        width: 100%;
+        background: black;
+        position: relative;
+    }
+
+    /* Base class for all layers */
     .layer {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 100vw;
-        height: 100vh;
+        position: absolute;
+        max-width: 100%;
+        max-height: 100%;
         object-fit: contain;
         user-select: none;
         -webkit-user-drag: none;
     }
 
-    /* Visible scene */
-    #scene {
-        z-index: 1;
-    }
-
     /* Highlight overlays */
     .overlay {
-        z-index: 2;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.2s ease-in-out;
-    }
-
-    #mask {
-        display: none;
+        z-index: 2;
     }
 </style>
 </head>
 <body>
 
-<!-- Visible -->
-<img id="scene" src="hallway.png">
-
-<!-- Hidden color map -->
-<img id="mask" src="clickmap.png" style="display:none;">
-
-<!-- Highlight overlays -->
-<img id="highlightdoor" class="overlay" src="HiDoor.png">
-<img id="highlightshelf" class="overlay" src="HiShelf.png">
-<img id="highlightboard" class="overlay" src="HiCork.png">
+<div id="container">
+    <img id="scene" class="layer" src="hallway.png">
+    <img id="mask" class="layer" src="clickmap.png" style="display:none;">
+    <img id="highlightdoor" class="layer overlay" src="HiDoor.png">
+    <img id="highlightshelf" class="layer overlay" src="HiShelf.png">
+    <img id="highlightboard" class="layer overlay" src="HiCork.png">
+</div>
 
 <script>
 const scene = document.getElementById("scene");
@@ -63,39 +62,30 @@ const highlightBoard = document.getElementById("highlightboard");
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
 
+let currentColor = "";
+
 mask.onload = () => {
-    canvas.width = mask.width;
-    canvas.height = mask.height;
+    canvas.width = mask.naturalWidth;
+    canvas.height = mask.naturalHeight;
     ctx.drawImage(mask, 0, 0);
 };
 
 scene.addEventListener("mousemove", (e) => {
     const rect = scene.getBoundingClientRect();
 
-    // mouse cords to mask
-    const x = Math.floor((e.clientX - rect.left) * (mask.width / rect.width));
-    const y = Math.floor((e.clientY - rect.top) * (mask.height / rect.height));
+    const x = Math.floor((e.clientX - rect.left) * (mask.naturalWidth / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (mask.naturalHeight / rect.height));
 
     const pixel = ctx.getImageData(x, y, 1, 1).data;
-    const color = `${pixel[0]},${pixel[1]},${pixel[2]}`;
+    currentColor = `${pixel[0]},${pixel[1]},${pixel[2]}`;
 
-    // Reset all overlays
     highlightDoor.style.opacity = 0;
     highlightShelf.style.opacity = 0;
     highlightBoard.style.opacity = 0;
 
-
-    if (color === "255,255,0") {
-        highlightDoor.style.opacity = 1;
-    }
-
-    if (color === "255,0,0") {
-        highlightShelf.style.opacity = 1;
-    }
-
-    if (color === "0,0,255") {
-        highlightBoard.style.opacity = 1;
-    }
+    if (currentColor === "255,255,0") highlightDoor.style.opacity = 1;
+    if (currentColor === "255,0,0") highlightShelf.style.opacity = 1;
+    if (currentColor === "0,0,255") highlightBoard.style.opacity = 1;
 });
 </script>
 
