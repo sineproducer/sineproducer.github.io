@@ -58,19 +58,10 @@
     <img id="highlightback" class="layer overlay" src="HiBack.png">
 
     <!-- TEXT -->
-    <div class="note" style="top: 34%; left: 18%; font-family: 'Comic Sans MS'; transform: translate(-50%, -50%) rotate(4deg);">
-        hello!
-    </div>
-
-    <div class="note" style="top: 58.5%; left: 16.2%; font-family: 'Courier'; transform: translate(-50%, -50%) rotate(-2deg);">
-        Click things! Look around!
-    </div>
-
-    <div class="note" style="top: 45%; left: 64%; transform: translate(-50%, -50%) rotate(-2deg);">
-        Click things! Look around!
-    </div>
-
-    <div class="note" style="top: 34%; left: 18%; transform: translate(-50%, -50%) rotate(4deg);">
+<div class="note"
+     data-x="18"
+     data-y="34"
+     style="transform: translate(-50%, -50%) rotate(4deg);">
     hello!<br>
     this is a new line<br>
     and another one
@@ -120,6 +111,25 @@ scene.addEventListener("click", (e) => {
         window.location.href = "index.html";
     }
 });
+function positionNotes() {
+    const rect = scene.getBoundingClientRect();
+    const notes = document.querySelectorAll(".note");
+
+    notes.forEach(note => {
+        const x = parseFloat(note.dataset.x); // percent
+        const y = parseFloat(note.dataset.y); // percent
+
+        // Convert percent → pixel inside the image box
+        const px = rect.left + (rect.width * x / 100);
+        const py = rect.top + (rect.height * y / 100);
+
+        note.style.left = px + "px";
+        note.style.top = py + "px";
+    });
+}
+
+window.addEventListener("resize", positionNotes);
+window.addEventListener("load", positionNotes);
 </script>
 
 </body>
