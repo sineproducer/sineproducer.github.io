@@ -82,10 +82,33 @@ scene.addEventListener("mousemove", (e) => {
     highlightDoor.style.opacity = 0;
     highlightShelf.style.opacity = 0;
     highlightBoard.style.opacity = 0;
-
+ // uhhh the fucking uh the map highlight logic
     if (currentColor === "255,255,0") highlightDoor.style.opacity = 1;
     if (currentColor === "255,0,0") highlightShelf.style.opacity = 1;
     if (currentColor === "0,0,255") highlightBoard.style.opacity = 1;
+});
+ // Clicky logic
+scene.addEventListener("click", (e) => {
+    const rect = scene.getBoundingClientRect();
+
+    const x = Math.floor((e.clientX - rect.left) * (mask.naturalWidth / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (mask.naturalHeight / rect.height));
+
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    const clickedColor = `${pixel[0]},${pixel[1]},${pixel[2]}`;
+
+    // Clicky click
+    if (clickedColor === "255,255,0") {
+        window.location.href = "door.html";
+    }
+
+    if (clickedColor === "255,0,0") {
+        window.location.href = "shelf.html";
+    }
+
+    if (clickedColor === "0,0,255") {
+        window.location.href = "board.html";
+    }
 });
 </script>
 
