@@ -40,20 +40,13 @@
         z-index: 2;
     }
 
-    /* tilted text style */
+    /* ✅ Notes now scale with the image */
     .note {
         position: absolute;
-        top: 40%;      /* vertically */
-        left: 30%;     /* horizontally */
-        color: black;
-        font-size: 24px;
-        font-family: "Comic Sans MS", sans-serif;
-        background: #fff8a8;
-        padding: 10px 15px;
-        border-radius: 4px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        transform: rotate(-8deg); /* tilt */
-        z-index: 3; /* above the board */
+        z-index: 3;
+        font-size: 1.6vw;   /* ✅ Scales with viewport width */
+        transform: translate(-50%, -50%);
+        white-space: nowrap;
     }
 </style>
 </head>
@@ -65,7 +58,23 @@
     <img id="highlightback" class="layer overlay" src="HiBack.png">
 
     <!-- TEXT -->
-    <div class="note">TESTETSTETETST</div>
+    <div class="note" style="top: 34%; left: 18%; font-family: 'Comic Sans MS'; transform: translate(-50%, -50%) rotate(4deg);">
+        hello!
+    </div>
+
+    <div class="note" style="top: 58.5%; left: 16.2%; font-family: 'Courier'; transform: translate(-50%, -50%) rotate(-2deg);">
+        Click things! Look around!
+    </div>
+
+    <div class="note" style="top: 45%; left: 64%; transform: translate(-50%, -50%) rotate(-2deg);">
+        Click things! Look around!
+    </div>
+
+    <div class="note" style="top: 34%; left: 18%; transform: translate(-50%, -50%) rotate(4deg);">
+    hello!<br>
+    this is a new line<br>
+    and another one
+    </div>
 </div>
 
 <script>
