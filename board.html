@@ -20,6 +20,7 @@
         width: 100%;
         background: black;
         position: relative;
+        font-size: 1.6vw; /* ✅ Global scale for all notes */
     }
 
     /* Base class for all layers */
@@ -40,11 +41,11 @@
         z-index: 2;
     }
 
-    /* ✅ Notes now scale with the image */
+    /* ✅ Notes scale with the container */
     .note {
         position: absolute;
         z-index: 3;
-        font-size: 1.6vw;   /* ✅ Scales with viewport width */
+        font-size: 1em; /* ✅ Inherits from container */
         transform: translate(-50%, -50%);
         white-space: nowrap;
     }
@@ -57,14 +58,14 @@
     <img id="mask" class="layer" src="boardmap.png" style="display:none;">
     <img id="highlightback" class="layer overlay" src="HiBack.png">
 
-    <!-- TEXT -->
-<div class="note"
-     data-x="18"
-     data-y="34"
-     style="transform: translate(-50%, -50%) rotate(4deg);">
-    hello!<br>
-    this is a new line<br>
-    and another one
+    <!-- ✅ Clean note: no inline left/top, no inline font-size -->
+    <div class="note"
+         data-x="22"
+         data-y="44"
+         style="transform: translate(-50%, -50%) rotate(4deg);">
+        hello!<br>
+        this is a new line<br>
+        and another one
     </div>
 </div>
 
@@ -111,15 +112,16 @@ scene.addEventListener("click", (e) => {
         window.location.href = "index.html";
     }
 });
+
+/* ✅ Percent → pixel positioning */
 function positionNotes() {
     const rect = scene.getBoundingClientRect();
     const notes = document.querySelectorAll(".note");
 
     notes.forEach(note => {
-        const x = parseFloat(note.dataset.x); // percent
-        const y = parseFloat(note.dataset.y); // percent
+        const x = parseFloat(note.dataset.x);
+        const y = parseFloat(note.dataset.y);
 
-        // Convert percent → pixel inside the image box
         const px = rect.left + (rect.width * x / 100);
         const py = rect.top + (rect.height * y / 100);
 
