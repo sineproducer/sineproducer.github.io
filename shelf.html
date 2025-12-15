@@ -47,7 +47,7 @@
         z-index: 2;
     }
 
-    /* ✅ Book overlay aligned to background and centered; will animate to full-size */
+    /* ✅ Book overlay aligned to background and centered; size/position changes are instant to avoid odd animations */
     #bookOverlay {
         position: absolute;
         left: 50%;
@@ -58,7 +58,7 @@
         object-fit: contain;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.3s ease-in-out, left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease, transform 0.3s ease;
+        transition: opacity 0.3s ease-in-out; /* only fade smoothly */
         z-index: 3;
     }
 
@@ -173,15 +173,17 @@ const pageCounter = document.getElementById("pageCounter");
 
 let currentPage = 0;
 
-/* ✅ Position elements relative to the background scene and size them based on the scene */
+/* ✅ Position elements relative to either the visible book overlay (when open) or the background scene, and size them based on that rect */
 function positionPageElements(page) {
-    const rect = scene.getBoundingClientRect(); // anchor to background scene
+    // If the book overlay or pages are visible, anchor to the overlay; otherwise use the scene
+    const useOverlay = (bookOverlay.style.opacity === "1" || bookPages.style.opacity === "1");
+    const rect = useOverlay ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
 
     const elems = page.querySelectorAll("[data-x][data-y]");
     elems.forEach(el => {
         const x = parseFloat(el.dataset.x);
         const y = parseFloat(el.dataset.y);
-        const w = el.dataset.w ? parseFloat(el.dataset.w) : 20; // percent of scene width
+        const w = el.dataset.w ? parseFloat(el.dataset.w) : 20; // percent of anchor width
 
         const px = rect.left + rect.width  * (x / 100);
         const py = rect.top  + rect.height * (y / 100);
@@ -193,7 +195,7 @@ function positionPageElements(page) {
         el.style.transform = "translate(-50%, -50%)";
     });
 
-    /* ✅ Also reposition the page counter */
+    /* ✅ Also reposition the page counter relative to the same anchor */
     const cx = parseFloat(pageCounter.dataset.x);
     const cy = parseFloat(pageCounter.dataset.y);
 
@@ -201,7 +203,7 @@ function positionPageElements(page) {
     pageCounter.style.top  = rect.top  + rect.height * (cy / 100) + "px";
     pageCounter.style.fontSize = Math.max(12, rect.width * 0.02) + "px";
     pageCounter.style.zIndex = 1000;
-}
+} 
 
 /* ✅ Update counter */
 function updatePageCounter() {
@@ -289,6 +291,11 @@ function syncBookOverlayToScene(full = true) {
         // update click zones for thumbnail
         syncClickZonesToOverlay();
     }
+
+    // If pages are visible, reposition them so they follow the overlay immediately
+    if (bookPages.style.opacity === "1") {
+        positionPageElements(pages[currentPage]);
+    } 
 }
 
 /* Position left/right click zones to fit the visible (non-transparent) area of the book overlay.
@@ -398,8 +405,14 @@ function prevPage() {
     }
 }
 
-rightZone.addEventListener("click", nextPage);
-leftZone.addEventListener("click", prevPage);
+rightZone.addEventListener("click", (e) => {
+    const color = getPixelColor(e);
+    if (color === "0,0,255") nextPage();
+});
+leftZone.addEventListener("click", (e) => {
+    const color = getPixelColor(e);
+    if (color === "0,0,255") prevPage();
+});
 
 </script>
 
