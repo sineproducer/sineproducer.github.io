@@ -36,35 +36,57 @@
         transition: opacity 0.2s ease-in-out;
         z-index: 2;
     }
-    
 
+    /* ✅ Book overlay stays aligned to background */
     #bookOverlay {
+        position: absolute;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.3s ease-in-out;
         z-index: 3;
     }
 
+    /* ✅ Pages also align to background */
     #bookPages {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        inset: 0;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.3s ease-in-out;
         z-index: 4;
     }
 
-
     .page {
         position: absolute;
-        width: 100%;
-        height: 100%;
+        inset: 0;
         display: none;
     }
 
+    /* ✅ Page elements positioned by corner system */
+    .page img,
+    #pageCounter {
+        position: absolute;
+        width: 25%;   /* adjust as needed */
+        height: 25%;
+        object-fit: contain;
+        user-select: auto;
+        pointer-events: none;
+    }
+
+    /* ✅ Page counter styling */
+    #pageCounter {
+        color: white;
+        font-family: sans-serif;
+        font-size: 20px;
+        width: auto;
+        height: auto;
+        z-index: 10;
+    }
+
+    /* ✅ Click zones aligned to background */
     #leftZone, #rightZone {
         position: absolute;
         top: 0;
@@ -76,45 +98,46 @@
 
     #leftZone { left: 0; }
     #rightZone { right: 0; }
-
-    #pageCounter {
-        position: absolute;
-        left: 89.7%;
-        top: 72.8%;
-        transform: translate(-50%, -50%);
-        color: black;
-        font-family: sans-serif;
-        font-size: 18px;
-        z-index: 10;
-        pointer-events: none;
-    }
 </style>
 </head>
 <body>
 
 <div id="container">
+
+    <!-- Background -->
     <img id="scene" class="layer" src="bookshelf.png">
     <img id="mask" class="layer" src="bookshelfclickmap.png" style="display:none;">
+
+    <!-- Hover highlights -->
     <img id="highlightBookOne" class="layer overlay" src="Hibook1.png">
     <img id="highlightBack" class="layer overlay" src="HiBack.png">
-    <img id="bookOverlay" class="layer" src="book1.png">
 
+    <!-- ✅ Book overlay -->
+    <img id="bookOverlay" src="book1.png">
+
+    <!-- ✅ Book pages -->
     <div id="bookPages">
+
         <div class="page">
-            <img src="CorkboardArchive1.png" style="position:absolute; top:0; left:0; max-width:50%; max-height:50%; object-fit:contain;">
+            <img src="CorkboardArchive1.png" data-corner="top-left">
         </div>
+
         <div class="page">
-            <img src="page2.png" style="position:absolute; top:0; left:0; max-width:50%; max-height:50%; object-fit:contain;">
+            <img src="page2.png" data-corner="top-right">
         </div>
+
         <div class="page">
-            <img src="page3.png" style="position:absolute; top:0; left:0; max-width:50%; max-height:50%; object-fit:contain;">
+            <img src="page3.png" data-corner="bottom-left">
         </div>
+
+        <!-- ✅ Page counter using corner system -->
+        <div id="pageCounter" data-corner="bottom-right">Page 1</div>
+
     </div>
 
-    <!-- Page flip zones -->
+    <!-- Click zones -->
     <div id="leftZone"></div>
     <div id="rightZone"></div>
-    <div id="pageCounter">Page 1</div>
 
 </div>
 
@@ -127,9 +150,9 @@ const highlightBookOne = document.getElementById("highlightBookOne");
 const highlightBack = document.getElementById("highlightBack");
 
 const bookOverlay = document.getElementById("bookOverlay");
-
 const bookPages = document.getElementById("bookPages");
 const pages = Array.from(document.querySelectorAll(".page"));
+
 const leftZone = document.getElementById("leftZone");
 const rightZone = document.getElementById("rightZone");
 
@@ -137,6 +160,25 @@ const pageCounter = document.getElementById("pageCounter");
 
 let currentPage = 0;
 
+/* ✅ Corner lookup table */
+const cornerPositions = {
+    "top-left":     { x: 5,  y: 5 },
+    "top-right":    { x: 70, y: 5 },
+    "bottom-left":  { x: 5,  y: 70 },
+    "bottom-right": { x: 70, y: 70 }
+};
+
+/* ✅ Apply corner offsets */
+function positionPageElements(page) {
+    const elems = page.querySelectorAll("[data-corner]");
+    elems.forEach(el => {
+        const pos = cornerPositions[el.dataset.corner];
+        el.style.left = pos.x + "%";
+        el.style.top = pos.y + "%";
+    });
+}
+
+/* ✅ Update counter */
 function updatePageCounter() {
     pageCounter.textContent = `Page ${currentPage + 1}`;
 }
@@ -159,7 +201,7 @@ function getPixelColor(e) {
     return `${pixel[0]},${pixel[1]},${pixel[2]}`;
 }
 
-/* HOVER HIGHLIGHTS */
+/* HOVER */
 scene.addEventListener("mousemove", (e) => {
     if (bookOverlay.style.opacity === "1") return;
 
@@ -168,36 +210,27 @@ scene.addEventListener("mousemove", (e) => {
     highlightBookOne.style.opacity = 0;
     highlightBack.style.opacity = 0;
 
-    if (color === "0,0,255") highlightBookOne.style.opacity = 1;  // book
-    if (color === "255,255,0") highlightBack.style.opacity = 1;   // back
+    if (color === "0,0,255") highlightBookOne.style.opacity = 1;
+    if (color === "255,255,0") highlightBack.style.opacity = 1;
 });
 
 /* CLICK */
 scene.addEventListener("click", (e) => {
     const color = getPixelColor(e);
 
-    if (color === "0,0,255") {
-        openBook();
-    }
-
-    if (color === "255,255,0") {
-        window.location.href = "index.html";
-    }
+    if (color === "0,0,255") openBook();
+    if (color === "255,255,0") window.location.href = "index.html";
 });
 
-/* BOOK OPEN/CLOSE */
+/* ✅ BOOK OPEN/CLOSE */
 function openBook() {
     bookOverlay.style.opacity = 1;
     bookOverlay.style.pointerEvents = "auto";
 
-    setTimeout(() => {
-        openPages();
-    }, 300);
+    setTimeout(() => openPages(), 300);
 }
 
-bookOverlay.addEventListener("click", () => {
-    closeBook();
-});
+bookOverlay.addEventListener("click", closeBook);
 
 function closeBook() {
     bookOverlay.style.opacity = 0;
@@ -205,12 +238,13 @@ function closeBook() {
     closePages();
 }
 
-/* pg function reader */
+/* ✅ PAGE READER */
 function openPages() {
     currentPage = 0;
     pages.forEach(p => p.style.display = "none");
-    pages[currentPage].style.display = "block";
 
+    pages[currentPage].style.display = "block";
+    positionPageElements(pages[currentPage]);
     updatePageCounter();
 
     bookPages.style.opacity = 1;
@@ -228,39 +262,30 @@ function closePages() {
     rightZone.style.pointerEvents = "none";
 }
 
-/* PAGE FLIPPING */
+/* ✅ PAGE FLIPPING */
 function nextPage() {
     if (currentPage < pages.length - 1) {
-        playFlipSound();
         pages[currentPage].style.display = "none";
         currentPage++;
         pages[currentPage].style.display = "block";
+        positionPageElements(pages[currentPage]);
         updatePageCounter();
     }
 }
 
 function prevPage() {
     if (currentPage > 0) {
-        playFlipSound();
         pages[currentPage].style.display = "none";
         currentPage--;
         pages[currentPage].style.display = "block";
+        positionPageElements(pages[currentPage]);
         updatePageCounter();
     }
-}
-
-function playFlipSound() {
-    const sfx = new Audio("pageflip.wav");
-    sfx.play();
 }
 
 rightZone.addEventListener("click", nextPage);
 leftZone.addEventListener("click", prevPage);
 
-bookPages.addEventListener("click", (e) => {
-    if (e.target === leftZone || e.target === rightZone) return;
-    closeBook();
-});
 </script>
 
 </body>
