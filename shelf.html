@@ -47,7 +47,7 @@
         z-index: 2;
     }
 
-    /* ✅ Book overlay aligned to background and centered */
+    /* ✅ Book overlay aligned to background and centered; will animate to full-size */
     #bookOverlay {
         position: absolute;
         left: 50%;
@@ -58,7 +58,7 @@
         object-fit: contain;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.3s ease-in-out;
+        transition: opacity 0.3s ease-in-out, left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease, transform 0.3s ease;
         z-index: 3;
     }
 
@@ -218,6 +218,11 @@ window.addEventListener("resize", () => {
         if (bookPages.style.opacity === "1") {
             positionPageElements(pages[currentPage]);
         }
+        if (bookOverlay.style.opacity === "1") {
+            syncBookOverlayToScene(true);
+        }
+        // Always recalc click zones in case overlay or scene shifted
+        syncClickZonesToOverlay();
     }, 50);
 });
 
@@ -261,20 +266,85 @@ scene.addEventListener("click", (e) => {
 });
 
 /* ✅ BOOK OPEN/CLOSE */
+/* Sync book overlay to scene rect (full = true for full-size, false to restore) */
+function syncBookOverlayToScene(full = true) {
+    const rect = scene.getBoundingClientRect();
+    if (full) {
+        // position to exactly cover the scene
+        bookOverlay.style.left = rect.left + 'px';
+        bookOverlay.style.top = rect.top + 'px';
+        bookOverlay.style.width = rect.width + 'px';
+        bookOverlay.style.height = rect.height + 'px';
+        bookOverlay.style.transform = 'none';
+        bookOverlay.style.objectFit = 'contain';
+        // update click zones to sit over the visible book area
+        syncClickZonesToOverlay();
+    } else {
+        // restore to centered thumbnail
+        bookOverlay.style.left = '50%';
+        bookOverlay.style.top = '50%';
+        bookOverlay.style.transform = 'translate(-50%, -50%)';
+        bookOverlay.style.width = '40%';
+        bookOverlay.style.height = 'auto';
+        // update click zones for thumbnail
+        syncClickZonesToOverlay();
+    }
+}
+
+/* Position left/right click zones to fit the visible (non-transparent) area of the book overlay.
+   Uses conservative insets — tweak the inset factors if you'd like a tighter or looser area. */
+function syncClickZonesToOverlay() {
+    // Use the overlay rect (if available) otherwise fall back to scene
+    const rect = bookOverlay.getBoundingClientRect().width ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
+
+    // Insets (percent of dimensions) — reduce these to make zones smaller
+    const insetX = rect.width * 0.06; // left/right margin
+    const insetY = rect.height * 0.08; // top/bottom margin
+    const zoneWidth = rect.width * 0.42;
+    const zoneHeight = rect.height * 0.84;
+
+    // Left zone
+    leftZone.style.left = (rect.left + insetX) + "px";
+    leftZone.style.top = (rect.top + insetY) + "px";
+    leftZone.style.width = zoneWidth + "px";
+    leftZone.style.height = zoneHeight + "px";
+    leftZone.style.zIndex = 1005;
+
+    // Right zone
+    rightZone.style.left = (rect.left + rect.width - insetX - zoneWidth) + "px";
+    rightZone.style.top = (rect.top + insetY) + "px";
+    rightZone.style.width = zoneWidth + "px";
+    rightZone.style.height = zoneHeight + "px";
+    rightZone.style.zIndex = 1005;
+} 
+
 function openBook() {
+    // expand to full scene size, then show
+    syncBookOverlayToScene(true);
     bookOverlay.style.opacity = 1;
     bookOverlay.style.pointerEvents = "auto";
 
     setTimeout(() => openPages(), 300);
 }
 
-bookOverlay.addEventListener("click", closeBook);
+// Book overlay click: check mask color for back-button even when the overlay covers the scene
+bookOverlay.addEventListener("click", (e) => {
+    const color = getPixelColor(e);
+    if (color === "255,255,0") {
+        window.location.href = "index.html";
+        return;
+    }
+    // not back — close the book
+    closeBook();
+});
 
 function closeBook() {
+    // shrink back then hide
+    syncBookOverlayToScene(false);
     bookOverlay.style.opacity = 0;
     bookOverlay.style.pointerEvents = "none";
     closePages();
-}
+} 
 
 /* ✅ PAGE READER */
 function openPages() {
@@ -290,6 +360,11 @@ function openPages() {
 
     leftZone.style.pointerEvents = "auto";
     rightZone.style.pointerEvents = "auto";
+    leftZone.style.cursor = 'pointer';
+    rightZone.style.cursor = 'pointer';
+
+    // Ensure zones match the overlay whenever pages are open
+    syncClickZonesToOverlay();
 }
 
 function closePages() {
@@ -298,6 +373,8 @@ function closePages() {
 
     leftZone.style.pointerEvents = "none";
     rightZone.style.pointerEvents = "none";
+    leftZone.style.cursor = '';
+    rightZone.style.cursor = '';
 }
 
 /* ✅ PAGE FLIPPING */
