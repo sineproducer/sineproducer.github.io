@@ -37,7 +37,7 @@
         z-index: 2;
     }
 
-    /* ✅ Book overlay stays aligned to background */
+    /* ✅ Book overlay aligned to background */
     #bookOverlay {
         position: absolute;
         max-width: 100%;
@@ -49,7 +49,7 @@
         z-index: 3;
     }
 
-    /* ✅ Pages also align to background */
+    /* ✅ Pages aligned to background */
     #bookPages {
         position: absolute;
         inset: 0;
@@ -65,18 +65,16 @@
         display: none;
     }
 
-    /* ✅ Page elements positioned by corner system */
+    /* ✅ Page elements positioned dynamically */
     .page img,
     #pageCounter {
         position: absolute;
         width: 25%;   /* adjust as needed */
         height: 25%;
         object-fit: contain;
-        user-select: auto;
         pointer-events: none;
     }
 
-    /* ✅ Page counter styling */
     #pageCounter {
         color: white;
         font-family: sans-serif;
@@ -160,21 +158,27 @@ const pageCounter = document.getElementById("pageCounter");
 
 let currentPage = 0;
 
-/* ✅ Corner lookup table */
+/* ✅ Percent-based corner table */
 const cornerPositions = {
     "top-left":     { x: 5,  y: 5 },
-    "top-right":    { x: 70, y: 5 },
-    "bottom-left":  { x: 5,  y: 70 },
-    "bottom-right": { x: 70, y: 70 }
+    "top-right":    { x: 95, y: 5 },
+    "bottom-left":  { x: 5,  y: 95 },
+    "bottom-right": { x: 95, y: 95 }
 };
 
-/* ✅ Apply corner offsets */
+/* ✅ Convert percent → pixel relative to background */
 function positionPageElements(page) {
+    const rect = scene.getBoundingClientRect();
+
     const elems = page.querySelectorAll("[data-corner]");
     elems.forEach(el => {
         const pos = cornerPositions[el.dataset.corner];
-        el.style.left = pos.x + "%";
-        el.style.top = pos.y + "%";
+
+        const x = rect.left + rect.width  * (pos.x / 100);
+        const y = rect.top  + rect.height * (pos.y / 100);
+
+        el.style.left = x + "px";
+        el.style.top  = y + "px";
     });
 }
 
@@ -182,6 +186,13 @@ function positionPageElements(page) {
 function updatePageCounter() {
     pageCounter.textContent = `Page ${currentPage + 1}`;
 }
+
+/* ✅ Reposition on resize */
+window.addEventListener("resize", () => {
+    if (bookPages.style.opacity === "1") {
+        positionPageElements(pages[currentPage]);
+    }
+});
 
 /* MASK CANVAS */
 const canvas = document.createElement("canvas");
