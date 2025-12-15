@@ -117,19 +117,19 @@
     <div id="bookPages">
 
         <div class="page">
-            <img src="CorkboardArchive1.png" data-corner="top-left">
+            <img src="CorkboardArchive1.png" data-x="5" data-y="5">
         </div>
 
         <div class="page">
-            <img src="page2.png" data-corner="top-right">
+            <img src="page2.png" data-x="75" data-y="5">
         </div>
 
         <div class="page">
-            <img src="page3.png" data-corner="bottom-left">
+            <img src="page3.png" data-x="5" data-y="75">
         </div>
 
-        <!-- ✅ Page counter using corner system -->
-        <div id="pageCounter" data-corner="bottom-right">Page 1</div>
+        <!-- ✅ Page counter using percent offsets -->
+        <div id="pageCounter" data-x="75" data-y="75">Page 1</div>
 
     </div>
 
@@ -158,28 +158,28 @@ const pageCounter = document.getElementById("pageCounter");
 
 let currentPage = 0;
 
-/* ✅ Percent-based corner table */
-const cornerPositions = {
-    "top-left":     { x: 5,  y: 5 },
-    "top-right":    { x: 95, y: 5 },
-    "bottom-left":  { x: 5,  y: 95 },
-    "bottom-right": { x: 95, y: 95 }
-};
-
-/* ✅ Convert percent → pixel relative to background */
+/* ✅ Convert percent → pixel relative to bookOverlay */
 function positionPageElements(page) {
-    const rect = scene.getBoundingClientRect();
+    const rect = bookOverlay.getBoundingClientRect(); // ✅ anchor to book
 
-    const elems = page.querySelectorAll("[data-corner]");
+    const elems = page.querySelectorAll("[data-x][data-y]");
     elems.forEach(el => {
-        const pos = cornerPositions[el.dataset.corner];
+        const x = parseFloat(el.dataset.x);
+        const y = parseFloat(el.dataset.y);
 
-        const x = rect.left + rect.width  * (pos.x / 100);
-        const y = rect.top  + rect.height * (pos.y / 100);
+        const px = rect.left + rect.width  * (x / 100);
+        const py = rect.top  + rect.height * (y / 100);
 
-        el.style.left = x + "px";
-        el.style.top  = y + "px";
+        el.style.left = px + "px";
+        el.style.top  = py + "px";
     });
+
+    /* ✅ Also reposition the page counter */
+    const cx = parseFloat(pageCounter.dataset.x);
+    const cy = parseFloat(pageCounter.dataset.y);
+
+    pageCounter.style.left = rect.left + rect.width  * (cx / 100) + "px";
+    pageCounter.style.top  = rect.top  + rect.height * (cy / 100) + "px";
 }
 
 /* ✅ Update counter */
@@ -187,11 +187,17 @@ function updatePageCounter() {
     pageCounter.textContent = `Page ${currentPage + 1}`;
 }
 
-/* ✅ Reposition on resize */
+/* ✅ Reposition on resize (with debounce) */
+let resizeTimeout;
+
 window.addEventListener("resize", () => {
-    if (bookPages.style.opacity === "1") {
-        positionPageElements(pages[currentPage]);
-    }
+    clearTimeout(resizeTimeout);
+
+    resizeTimeout = setTimeout(() => {
+        if (bookPages.style.opacity === "1") {
+            positionPageElements(pages[currentPage]);
+        }
+    }, 50);
 });
 
 /* MASK CANVAS */
