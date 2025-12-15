@@ -30,6 +30,16 @@
         -webkit-user-drag: none;
     }
 
+    /* Ensure the background scene is centered & scales; we'll anchor page elements to it */
+    #scene {
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        height: 100%;
+        width: auto;
+        display: block;
+    }
+
     .overlay {
         opacity: 0;
         pointer-events: none;
@@ -37,11 +47,14 @@
         z-index: 2;
     }
 
-    /* ✅ Book overlay aligned to background */
+    /* ✅ Book overlay aligned to background and centered */
     #bookOverlay {
         position: absolute;
-        max-width: 100%;
-        max-height: 100%;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 40%;          /* scales with the container/scene */
+        height: auto;
         object-fit: contain;
         opacity: 0;
         pointer-events: none;
@@ -69,10 +82,9 @@
     .page img,
     #pageCounter {
         position: absolute;
-        width: 25%;   /* adjust as needed */
-        height: 25%;
         object-fit: contain;
         pointer-events: none;
+        transform: translate(-50%, -50%); /* center the element at the coordinate */
     }
 
     #pageCounter {
@@ -117,7 +129,10 @@
     <div id="bookPages">
 
         <div class="page">
-            <img src="CorkboardArchive1.png" data-x="19" data-y="11">  <!-- upper left -->
+            <img src="CorkboardArchive1.png" data-x="19" data-y="15" data-w="20">  <!-- upper left -->
+            <img src="CorkboardArchive1.png" data-x="19" data-y="65" data-w="20"> <!-- lower left -->
+            <img src="CorkboardArchive1.png" data-x="81" data-y="15" data-w="20"> <!-- upper right -->
+            <img src="CorkboardArchive1.png" data-x="81" data-y="65" data-w="20"> <!-- lower right -->
         </div>
 
         <div class="page">
@@ -158,20 +173,24 @@ const pageCounter = document.getElementById("pageCounter");
 
 let currentPage = 0;
 
-/* ✅ Convert percent → pixel relative to bookOverlay */
+/* ✅ Position elements relative to the background scene and size them based on the scene */
 function positionPageElements(page) {
-    const rect = bookOverlay.getBoundingClientRect(); // ✅ anchor to book
+    const rect = scene.getBoundingClientRect(); // anchor to background scene
 
     const elems = page.querySelectorAll("[data-x][data-y]");
     elems.forEach(el => {
         const x = parseFloat(el.dataset.x);
         const y = parseFloat(el.dataset.y);
+        const w = el.dataset.w ? parseFloat(el.dataset.w) : 20; // percent of scene width
 
         const px = rect.left + rect.width  * (x / 100);
         const py = rect.top  + rect.height * (y / 100);
 
         el.style.left = px + "px";
         el.style.top  = py + "px";
+        el.style.width = (rect.width * (w / 100)) + "px";
+        el.style.height = "auto";
+        el.style.transform = "translate(-50%, -50%)";
     });
 
     /* ✅ Also reposition the page counter */
@@ -180,6 +199,8 @@ function positionPageElements(page) {
 
     pageCounter.style.left = rect.left + rect.width  * (cx / 100) + "px";
     pageCounter.style.top  = rect.top  + rect.height * (cy / 100) + "px";
+    pageCounter.style.fontSize = Math.max(12, rect.width * 0.02) + "px";
+    pageCounter.style.zIndex = 1000;
 }
 
 /* ✅ Update counter */
