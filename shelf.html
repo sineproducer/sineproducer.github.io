@@ -161,10 +161,20 @@ function syncHighlightsToScene() {
     });
 }
 
-// Position and scale arbitrary .item elements relative to the scene image
+// Position and scale arbitrary .item elements relative to the scene image or overlay when book is open
 function positionItems() {
-    const rect = scene.getBoundingClientRect();
-    document.querySelectorAll('.item').forEach(el => {
+    // anchor to the overlay when the book is open, otherwise to the scene
+    const rect = (bookOpen && bookOverlay.getBoundingClientRect().width) ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
+
+    // only position items that are visible (inside the currently displayed page) when pages exist
+    let items = [];
+    if (pages && pages.length) {
+        const visible = pages[currentPage];
+        if (visible) items = Array.from(visible.querySelectorAll('.item'));
+    }
+    if (!items.length) items = Array.from(document.querySelectorAll('.item'));
+
+    items.forEach(el => {
         const x = parseFloat(el.dataset.x) || 50;
         const y = parseFloat(el.dataset.y) || 50;
         const px = rect.left + rect.width * (x / 100);
@@ -176,9 +186,19 @@ function positionItems() {
 }
 
 function scaleItems() {
-    const rect = scene.getBoundingClientRect();
-    const scale = scene.naturalWidth ? (rect.width / scene.naturalWidth) : 1;
-    document.querySelectorAll('.item').forEach(el => {
+    // anchor scale to the overlay when open, otherwise to the scene
+    const rect = (bookOpen && bookOverlay.naturalWidth) ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
+    const natural = (bookOpen && bookOverlay.naturalWidth) ? bookOverlay.naturalWidth : scene.naturalWidth || rect.width;
+    const scale = natural ? (rect.width / natural) : 1;
+
+    let items = [];
+    if (pages && pages.length) {
+        const visible = pages[currentPage];
+        if (visible) items = Array.from(visible.querySelectorAll('.item'));
+    }
+    if (!items.length) items = Array.from(document.querySelectorAll('.item'));
+
+    items.forEach(el => {
         const w = el.dataset.w ? parseFloat(el.dataset.w) : NaN;
         if (!isNaN(w)) {
             el.style.width = (rect.width * (w / 100)) + 'px';
