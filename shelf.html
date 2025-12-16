@@ -6,7 +6,8 @@
     #container { display:flex; justify-content:center; align-items:center; height:100%; width:100%; background:black; position:relative; }
     .layer { position:absolute; max-width:100%; max-height:100%; object-fit:contain; user-select:none; -webkit-user-drag:none; }
     #scene { left:50%; top:50%; transform:translate(-50%,-50%); height:100%; width:auto; display:block; }
-    .overlay { opacity:0; pointer-events:none; transition:opacity 0.2s ease-in-out; z-index:2; }
+    .overlay { opacity:0; pointer-events:none; transition:opacity 0.2s ease-in-out; z-index:1005; }
+
 
     /* Items that will be positioned/scaled relative to the scene (use data-x, data-y, data-w, data-size)
        Example: <img class="item" src="pic.png" data-x="30" data-y="40" data-w="20"> */
@@ -80,7 +81,9 @@ function syncHighlightsToScene() {
         h.style.height = rect.height + 'px';
         h.style.transform = 'none';
         h.style.pointerEvents = 'none';
-        h.style.zIndex = 3;
+        h.style.zIndex = 1005;
+        h.style.display = 'block';
+        h.style.visibility = 'visible';
     });
 }
 
