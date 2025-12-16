@@ -2,20 +2,18 @@
 <html>
 <head>
 <style>
-    :root { --z-highlight: 1; --z-pages: 2; --z-overlay: 3; --z-counter: 4; }
-
     html, body { margin:0; padding:0; background:black; height:100%; width:100%; overflow:hidden; }
     #container { display:flex; justify-content:center; align-items:center; height:100%; width:100%; background:black; position:relative; }
     .layer { position:absolute; max-width:100%; max-height:100%; object-fit:contain; user-select:none; -webkit-user-drag:none; }
     #scene { left:50%; top:50%; transform:translate(-50%,-50%); height:100%; width:auto; display:block; }
-    .overlay { opacity:0; pointer-events:none; transition:opacity 0.2s ease-in-out; z-index: var(--z-highlight); }
+    .overlay { opacity:0; pointer-events:none; transition:opacity 0.2s ease-in-out; z-index: 1; }
 
 
     /* Items that will be positioned/scaled relative to the scene (use data-x, data-y, data-w, data-size)
        Example: <img class="item" src="pic.png" data-x="30" data-y="40" data-w="20"> */
     .item {
         position: absolute;
-        z-index: var(--z-pages); /* items sit above highlight overlays */
+        z-index: 3; /* items sit above highlight overlays */
         display: block;
         transform: translate(-50%, -50%);
         pointer-events: none; /* set to auto if you want items clickable */
@@ -27,7 +25,7 @@
     /* Full-screen book overlay (hidden by default) */
     #bookOverlay {
         position: absolute;
-        z-index: var(--z-overlay); /* overlay above highlights and items */
+        z-index: 2; /* overlay above highlights and items */
         transition: opacity 0.25s ease-in-out;
         opacity: 0;
         pointer-events: none;
@@ -40,13 +38,13 @@
     }
 
     /* Pages inside the book */
-    #bookPages { position:absolute; inset:0; pointer-events:none; z-index: var(--z-pages); opacity:1; }
+    #bookPages { position:absolute; inset:0; pointer-events:none; z-index: 3; opacity:1; }
     .page { display:none; position:absolute; inset:0; }
     .page .item { pointer-events:none; }
 
     #pageCounter {
         position:absolute;
-        z-index: var(--z-counter); /* counter above overlay and items */
+        z-index: 4; /* counter above overlay and items */
         color: white;
         font-family: sans-serif;
         font-size: 16px;
