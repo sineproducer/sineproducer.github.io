@@ -2,113 +2,36 @@
 <html>
 <head>
 <style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        background: black;
-        height: 100%;
-        width: 100%;
-        overflow: hidden;
-    }
+    html, body { margin:0; padding:0; background:black; height:100%; width:100%; overflow:hidden; }
+    #container { display:flex; justify-content:center; align-items:center; height:100%; width:100%; background:black; position:relative; }
+    .layer { position:absolute; max-width:100%; max-height:100%; object-fit:contain; user-select:none; -webkit-user-drag:none; }
+    #scene { left:50%; top:50%; transform:translate(-50%,-50%); height:100%; width:auto; display:block; }
+    .overlay { opacity:0; pointer-events:none; transition:opacity 0.2s ease-in-out; z-index:2; }
 
-    #container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        width: 100%;
-        background: black;
-        position: relative;
-    }
-
-    .layer {
+    /* Items that will be positioned/scaled relative to the scene (use data-x, data-y, data-w, data-size)
+       Example: <img class="item" src="pic.png" data-x="30" data-y="40" data-w="20"> */
+    .item {
         position: absolute;
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-        user-select: none;
-        -webkit-user-drag: none;
-    }
-
-    /* Ensure the background scene is centered & scales; we'll anchor page elements to it */
-    #scene {
-        left: 50%;
-        top: 50%;
+        z-index: 4;
         transform: translate(-50%, -50%);
-        height: 100%;
-        width: auto;
-        display: block;
+        pointer-events: none; /* set to auto if you want items clickable */
     }
 
-    .overlay {
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease-in-out;
-        z-index: 2;
-    }
-
-    /* ✅ Book overlay aligned to background and centered; size/position changes are instant to avoid odd animations */
+    /* Full-screen book overlay (hidden by default) */
     #bookOverlay {
         position: absolute;
+        z-index: 999;
+        transition: opacity 0.25s ease-in-out;
+        opacity: 0;
+        pointer-events: none;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
-        width: 40%;          /* scales with the container/scene */
+        width: 40%;
         height: auto;
         object-fit: contain;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease-in-out; /* only fade smoothly */
-        z-index: 3;
     }
-
-    /* ✅ Pages aligned to background */
-    #bookPages {
-        position: absolute;
-        inset: 0;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease-in-out;
-        z-index: 4;
-    }
-
-    .page {
-        position: absolute;
-        inset: 0;
-        display: none;
-    }
-
-    /* ✅ Page elements positioned dynamically */
-    .page img,
-    #pageCounter {
-        position: absolute;
-        object-fit: contain;
-        pointer-events: none;
-        transform: translate(-50%, -50%); /* center the element at the coordinate */
-    }
-
-    #pageCounter {
-        color: white;
-        font-family: sans-serif;
-        font-size: 20px;
-        width: auto;
-        height: auto;
-        z-index: 10;
-    }
-
-    /* ✅ Click zones aligned to background */
-    #leftZone, #rightZone {
-        position: absolute;
-        top: 0;
-        width: 50%;
-        height: 100%;
-        z-index: 5;
-        pointer-events: none;
-    }
-
-    #leftZone { left: 0; }
-    #rightZone { right: 0; }
-</style>
+</style>  
 </head>
 <body>
 
@@ -122,298 +45,171 @@
     <img id="highlightBookOne" class="layer overlay" src="Hibook1.png">
     <img id="highlightBack" class="layer overlay" src="HiBack.png">
 
-    <!-- ✅ Book overlay -->
-    <img id="bookOverlay" src="book1.png">
-
-    <!-- ✅ Book pages -->
-    <div id="bookPages">
-
-        <div class="page">
-            <img src="CorkboardArchive1.png" data-x="19" data-y="15" data-w="20">  <!-- upper left -->
-            <img src="CorkboardArchive1.png" data-x="19" data-y="65" data-w="20"> <!-- lower left -->
-            <img src="CorkboardArchive1.png" data-x="81" data-y="15" data-w="20"> <!-- upper right -->
-            <img src="CorkboardArchive1.png" data-x="81" data-y="65" data-w="20"> <!-- lower right -->
-        </div>
-
-        <div class="page">
-            <img src="page2.png" data-x="19" data-y="45"> <!-- lower left -->
-        </div>
-
-        <div class="page">
-            <img src="page3.png" data-x="81" data-y="11"> <!-- upper right -->
-        </div>
-
-        <!-- ✅ Page counter using percent offsets -->
-        <div id="pageCounter" data-x="75" data-y="75">Page 1</div>
-
-    </div>
-
-    <!-- Click zones -->
-    <div id="leftZone"></div>
-    <div id="rightZone"></div>
+    <!-- Book overlay (opens full scene when book is clicked) -->
+    <img id="bookOverlay" class="layer" src="book1.png">
 
 </div>
 
 <script>
-/* ELEMENTS */
+// Minimal clickmap & highlights + back-button and book overlay
 const scene = document.getElementById("scene");
 const mask = document.getElementById("mask");
-
 const highlightBookOne = document.getElementById("highlightBookOne");
 const highlightBack = document.getElementById("highlightBack");
-
 const bookOverlay = document.getElementById("bookOverlay");
-const bookPages = document.getElementById("bookPages");
-const pages = Array.from(document.querySelectorAll(".page"));
 
-const leftZone = document.getElementById("leftZone");
-const rightZone = document.getElementById("rightZone");
-
-const pageCounter = document.getElementById("pageCounter");
-
-let currentPage = 0;
-
-/* ✅ Position elements relative to either the visible book overlay (when open) or the background scene, and size them based on that rect */
-function positionPageElements(page) {
-    // If the book overlay or pages are visible, anchor to the overlay; otherwise use the scene
-    const useOverlay = (bookOverlay.style.opacity === "1" || bookPages.style.opacity === "1");
-    const rect = useOverlay ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
-
-    const elems = page.querySelectorAll("[data-x][data-y]");
-    elems.forEach(el => {
-        const x = parseFloat(el.dataset.x);
-        const y = parseFloat(el.dataset.y);
-        const w = el.dataset.w ? parseFloat(el.dataset.w) : 20; // percent of anchor width
-
-        const px = rect.left + rect.width  * (x / 100);
-        const py = rect.top  + rect.height * (y / 100);
-
-        el.style.left = px + "px";
-        el.style.top  = py + "px";
-        el.style.width = (rect.width * (w / 100)) + "px";
-        el.style.height = "auto";
-        el.style.transform = "translate(-50%, -50%)";
-    });
-
-    /* ✅ Also reposition the page counter relative to the same anchor */
-    const cx = parseFloat(pageCounter.dataset.x);
-    const cy = parseFloat(pageCounter.dataset.y);
-
-    pageCounter.style.left = rect.left + rect.width  * (cx / 100) + "px";
-    pageCounter.style.top  = rect.top  + rect.height * (cy / 100) + "px";
-    pageCounter.style.fontSize = Math.max(12, rect.width * 0.02) + "px";
-    pageCounter.style.zIndex = 1000;
-} 
-
-/* ✅ Update counter */
-function updatePageCounter() {
-    pageCounter.textContent = `Page ${currentPage + 1}`;
-}
-
-/* ✅ Reposition on resize (with debounce) */
-let resizeTimeout;
-
-window.addEventListener("resize", () => {
-    clearTimeout(resizeTimeout);
-
-    resizeTimeout = setTimeout(() => {
-        if (bookPages.style.opacity === "1") {
-            positionPageElements(pages[currentPage]);
-        }
-        if (bookOverlay.style.opacity === "1") {
-            syncBookOverlayToScene(true);
-        }
-        // Always recalc click zones in case overlay or scene shifted
-        syncClickZonesToOverlay();
-    }, 50);
-});
-
-/* MASK CANVAS */
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
 
-mask.onload = () => {
+let bookOpen = false;
+
+function drawMaskToCanvas() {
+    if (!mask.naturalWidth || !mask.naturalHeight) return;
     canvas.width = mask.naturalWidth;
     canvas.height = mask.naturalHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(mask, 0, 0);
-};
-
-function getPixelColor(e) {
-    const rect = scene.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) * (mask.naturalWidth / rect.width));
-    const y = Math.floor((e.clientY - rect.top) * (mask.naturalHeight / rect.height));
-    const pixel = ctx.getImageData(x, y, 1, 1).data;
-    return `${pixel[0]},${pixel[1]},${pixel[2]}`;
 }
 
-/* HOVER */
-scene.addEventListener("mousemove", (e) => {
-    if (bookOverlay.style.opacity === "1") return;
+function syncHighlightsToScene() {
+    const rect = scene.getBoundingClientRect();
+    [highlightBookOne, highlightBack].forEach(h => {
+        h.style.left = rect.left + 'px';
+        h.style.top = rect.top + 'px';
+        h.style.width = rect.width + 'px';
+        h.style.height = rect.height + 'px';
+        h.style.transform = 'none';
+        h.style.pointerEvents = 'none';
+        h.style.zIndex = 3;
+    });
+}
 
-    const color = getPixelColor(e);
+// Position and scale arbitrary .item elements relative to the scene image
+function positionItems() {
+    const rect = scene.getBoundingClientRect();
+    document.querySelectorAll('.item').forEach(el => {
+        const x = parseFloat(el.dataset.x) || 50;
+        const y = parseFloat(el.dataset.y) || 50;
+        const px = rect.left + rect.width * (x / 100);
+        const py = rect.top + rect.height * (y / 100);
+        el.style.left = px + 'px';
+        el.style.top = py + 'px';
+        el.style.transform = 'translate(-50%, -50%)';
+    });
+}
 
-    highlightBookOne.style.opacity = 0;
-    highlightBack.style.opacity = 0;
+function scaleItems() {
+    const rect = scene.getBoundingClientRect();
+    const scale = scene.naturalWidth ? (rect.width / scene.naturalWidth) : 1;
+    document.querySelectorAll('.item').forEach(el => {
+        const w = el.dataset.w ? parseFloat(el.dataset.w) : NaN;
+        if (!isNaN(w)) {
+            el.style.width = (rect.width * (w / 100)) + 'px';
+            el.style.height = 'auto';
+        }
+        const fs = el.dataset.size ? parseFloat(el.dataset.size) : NaN;
+        if (!isNaN(fs)) {
+            el.style.fontSize = (fs * scale) + 'px';
+        }
+    });
+}
 
-    if (color === "0,0,255") highlightBookOne.style.opacity = 1;
-    if (color === "255,255,0") highlightBack.style.opacity = 1;
-});
-
-/* CLICK */
-scene.addEventListener("click", (e) => {
-    const color = getPixelColor(e);
-
-    if (color === "0,0,255") openBook();
-    if (color === "255,255,0") window.location.href = "index.html";
-});
-
-/* ✅ BOOK OPEN/CLOSE */
-/* Sync book overlay to scene rect (full = true for full-size, false to restore) */
+// Position and size the overlay to either fill the scene (full=true) or restore to centered thumbnail
 function syncBookOverlayToScene(full = true) {
     const rect = scene.getBoundingClientRect();
     if (full) {
-        // position to exactly cover the scene
         bookOverlay.style.left = rect.left + 'px';
         bookOverlay.style.top = rect.top + 'px';
         bookOverlay.style.width = rect.width + 'px';
         bookOverlay.style.height = rect.height + 'px';
         bookOverlay.style.transform = 'none';
-        bookOverlay.style.objectFit = 'contain';
-        // update click zones to sit over the visible book area
-        syncClickZonesToOverlay();
     } else {
-        // restore to centered thumbnail
         bookOverlay.style.left = '50%';
         bookOverlay.style.top = '50%';
         bookOverlay.style.transform = 'translate(-50%, -50%)';
         bookOverlay.style.width = '40%';
         bookOverlay.style.height = 'auto';
-        // update click zones for thumbnail
-        syncClickZonesToOverlay();
     }
-
-    // If pages are visible, reposition them so they follow the overlay immediately
-    if (bookPages.style.opacity === "1") {
-        positionPageElements(pages[currentPage]);
-    } 
 }
-
-/* Position left/right click zones to fit the visible (non-transparent) area of the book overlay.
-   Uses conservative insets — tweak the inset factors if you'd like a tighter or looser area. */
-function syncClickZonesToOverlay() {
-    // Use the overlay rect (if available) otherwise fall back to scene
-    const rect = bookOverlay.getBoundingClientRect().width ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
-
-    // Insets (percent of dimensions) — reduce these to make zones smaller
-    const insetX = rect.width * 0.06; // left/right margin
-    const insetY = rect.height * 0.08; // top/bottom margin
-    const zoneWidth = rect.width * 0.42;
-    const zoneHeight = rect.height * 0.84;
-
-    // Left zone
-    leftZone.style.left = (rect.left + insetX) + "px";
-    leftZone.style.top = (rect.top + insetY) + "px";
-    leftZone.style.width = zoneWidth + "px";
-    leftZone.style.height = zoneHeight + "px";
-    leftZone.style.zIndex = 1005;
-
-    // Right zone
-    rightZone.style.left = (rect.left + rect.width - insetX - zoneWidth) + "px";
-    rightZone.style.top = (rect.top + insetY) + "px";
-    rightZone.style.width = zoneWidth + "px";
-    rightZone.style.height = zoneHeight + "px";
-    rightZone.style.zIndex = 1005;
-} 
 
 function openBook() {
-    // expand to full scene size, then show
     syncBookOverlayToScene(true);
-    bookOverlay.style.opacity = 1;
-    bookOverlay.style.pointerEvents = "auto";
-
-    setTimeout(() => openPages(), 300);
+    bookOverlay.style.opacity = '1';
+    bookOverlay.style.pointerEvents = 'auto';
+    bookOpen = true;
 }
-
-// Book overlay click: check mask color for back-button even when the overlay covers the scene
-bookOverlay.addEventListener("click", (e) => {
-    const color = getPixelColor(e);
-    if (color === "255,255,0") {
-        window.location.href = "index.html";
-        return;
-    }
-    // not back — close the book
-    closeBook();
-});
 
 function closeBook() {
-    // shrink back then hide
     syncBookOverlayToScene(false);
-    bookOverlay.style.opacity = 0;
-    bookOverlay.style.pointerEvents = "none";
-    closePages();
-} 
-
-/* ✅ PAGE READER */
-function openPages() {
-    currentPage = 0;
-    pages.forEach(p => p.style.display = "none");
-
-    pages[currentPage].style.display = "block";
-    positionPageElements(pages[currentPage]);
-    updatePageCounter();
-
-    bookPages.style.opacity = 1;
-    bookPages.style.pointerEvents = "auto";
-
-    leftZone.style.pointerEvents = "auto";
-    rightZone.style.pointerEvents = "auto";
-    leftZone.style.cursor = 'pointer';
-    rightZone.style.cursor = 'pointer';
-
-    // Ensure zones match the overlay whenever pages are open
-    syncClickZonesToOverlay();
+    bookOverlay.style.opacity = '0';
+    bookOverlay.style.pointerEvents = 'none';
+    bookOpen = false;
 }
 
-function closePages() {
-    bookPages.style.opacity = 0;
-    bookPages.style.pointerEvents = "none";
+mask.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); });
+if (mask.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); }
 
-    leftZone.style.pointerEvents = "none";
-    rightZone.style.pointerEvents = "none";
-    leftZone.style.cursor = '';
-    rightZone.style.cursor = '';
+function getPixelColor(e) {
+    const rect = scene.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) * (mask.naturalWidth / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (mask.naturalHeight / rect.height));
+    if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return "0,0,0";
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    return `${pixel[0]},${pixel[1]},${pixel[2]}`;
 }
 
-/* ✅ PAGE FLIPPING */
-function nextPage() {
-    if (currentPage < pages.length - 1) {
-        pages[currentPage].style.display = "none";
-        currentPage++;
-        pages[currentPage].style.display = "block";
-        positionPageElements(pages[currentPage]);
-        updatePageCounter();
-    }
-}
-
-function prevPage() {
-    if (currentPage > 0) {
-        pages[currentPage].style.display = "none";
-        currentPage--;
-        pages[currentPage].style.display = "block";
-        positionPageElements(pages[currentPage]);
-        updatePageCounter();
-    }
-}
-
-rightZone.addEventListener("click", (e) => {
+scene.addEventListener('mousemove', (e) => {
     const color = getPixelColor(e);
-    if (color === "0,0,255") nextPage();
+    if (bookOpen) {
+        // while book is open, ignore blue and only show back highlight
+        highlightBookOne.style.opacity = 0;
+        highlightBack.style.opacity = (color === '255,255,0') ? 1 : 0;
+    } else {
+        highlightBookOne.style.opacity = (color === '0,0,255') ? 1 : 0;
+        highlightBack.style.opacity = (color === '255,255,0') ? 1 : 0;
+    }
 });
-leftZone.addEventListener("click", (e) => {
-    const color = getPixelColor(e);
-    if (color === "0,0,255") prevPage();
+scene.addEventListener('mouseleave', () => {
+    highlightBookOne.style.opacity = 0;
+    highlightBack.style.opacity = 0;
 });
 
+scene.addEventListener('click', (e) => {
+    const color = getPixelColor(e);
+    if (color === '0,0,255' && !bookOpen) {
+        openBook();
+    } else if (color === '255,255,0') {
+        if (bookOpen) closeBook();
+        else window.location.href = 'index.html';
+    }
+    // other clicks ignored
+});
+
+bookOverlay.addEventListener('click', (e) => {
+    const color = getPixelColor(e);
+    if (color === '255,255,0') {
+        closeBook();
+    }
+    // otherwise do nothing while book is open
+});
+
+// Resize handler: keep mask canvas, highlight margins, items and overlay synced to the background
+window.addEventListener('resize', () => {
+    drawMaskToCanvas();
+    syncHighlightsToScene();
+    positionItems();
+    scaleItems();
+    if (bookOpen) syncBookOverlayToScene(true);
+});
+
+// Ensure layout is correct on initial load
+window.addEventListener('load', () => {
+    drawMaskToCanvas();
+    syncHighlightsToScene();
+    positionItems();
+    scaleItems();
+    syncBookOverlayToScene(false);
+});
 </script>
 
 </body>
