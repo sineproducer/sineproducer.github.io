@@ -32,6 +32,23 @@
         height: auto;
         object-fit: contain;
     }
+
+    /* Pages inside the book */
+    #bookPages { position:absolute; inset:0; pointer-events:none; z-index:998; opacity:1; }
+    .page { display:none; position:absolute; inset:0; }
+    .page .item { pointer-events:none; }
+
+    #pageCounter {
+        position:absolute;
+        z-index:1006;
+        color: white;
+        font-family: sans-serif;
+        font-size: 16px;
+        right: 8%;
+        bottom: 8%;
+        transform: translate(0,0);
+        pointer-events: none;
+    }
 </style>  
 </head>
 <body>
@@ -48,6 +65,24 @@
 
     <!-- Book overlay (opens full scene when book is clicked) -->
     <img id="bookOverlay" class="layer" src="book1.png">
+
+    <!-- Book pages: each .page contains 4 positioned .item images -->
+    <div id="bookPages">
+        <div class="page">
+            <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="15" data-w="20">
+            <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="65" data-w="20">
+            <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="15" data-w="20">
+            <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="65" data-w="20">
+        </div>
+        <div class="page">
+            <img class="item" src="page2_img1.png" data-x="19" data-y="15" data-w="20">
+            <img class="item" src="page2_img2.png" data-x="19" data-y="65" data-w="20">
+            <img class="item" src="page2_img3.png" data-x="81" data-y="15" data-w="20">
+            <img class="item" src="page2_img4.png" data-x="81" data-y="65" data-w="20">
+        </div>
+
+        <div id="pageCounter">Page 1</div>
+    </div>
 
 </div>
 
@@ -70,6 +105,42 @@ function drawMaskToCanvas() {
     canvas.height = mask.naturalHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(mask, 0, 0);
+}
+
+// Pages management
+const bookPages = document.getElementById('bookPages');
+const pages = bookPages ? Array.from(bookPages.querySelectorAll('.page')) : [];
+let currentPage = 0;
+
+function showPage(i) {
+    if (!pages.length) return;
+    if (i < 0 || i >= pages.length) return;
+    pages.forEach(p => p.style.display = 'none');
+    pages[i].style.display = 'block';
+    currentPage = i;
+    // position/scale only active items
+    positionItems();
+    scaleItems();
+    const pc = document.getElementById('pageCounter');
+    if (pc) pc.textContent = `Page ${currentPage + 1}`;
+}
+
+function openPages() {
+    if (!pages.length) return;
+    showPage(0);
+    bookPages.style.pointerEvents = 'none';
+}
+
+function closePages() {
+    pages.forEach(p => p.style.display = 'none');
+}
+
+function nextPage() {
+    if (currentPage < pages.length - 1) showPage(currentPage + 1);
+}
+
+function prevPage() {
+    if (currentPage > 0) showPage(currentPage - 1);
 }
 
 function syncHighlightsToScene() {
@@ -138,8 +209,10 @@ function syncBookOverlayToScene(full = true) {
 function openBook() {
     syncBookOverlayToScene(true);
     bookOverlay.style.opacity = '1';
-    bookOverlay.style.pointerEvents = 'auto';
+    // overlay is click-through so scene receives clicks; still show overlay visually
+    bookOverlay.style.pointerEvents = 'none';
     bookOpen = true;
+    openPages();
 }
 
 function closeBook() {
@@ -147,6 +220,7 @@ function closeBook() {
     bookOverlay.style.opacity = '0';
     bookOverlay.style.pointerEvents = 'none';
     bookOpen = false;
+    closePages();
 }
 
 mask.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); });
@@ -179,22 +253,37 @@ scene.addEventListener('mouseleave', () => {
 
 scene.addEventListener('click', (e) => {
     const color = getPixelColor(e);
+
+    // Back button (yellow) always takes priority
+    if (color === '255,255,0') {
+        if (bookOpen) {
+            closeBook();
+            return;
+        } else {
+            window.location.href = 'index.html';
+            return;
+        }
+    }
+
+    // If book is open, clicks on left/right halves flip pages (only if inside the scene rect)
+    if (bookOpen) {
+        const rect = scene.getBoundingClientRect();
+        const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+        if (inside) {
+            const mid = rect.left + rect.width / 2;
+            if (e.clientX < mid) prevPage();
+            else nextPage();
+        }
+        return;
+    }
+
+    // If not open and user clicked the blue book area, open it
     if (color === '0,0,255' && !bookOpen) {
         openBook();
-    } else if (color === '255,255,0') {
-        if (bookOpen) closeBook();
-        else window.location.href = 'index.html';
     }
-    // other clicks ignored
 });
 
-bookOverlay.addEventListener('click', (e) => {
-    const color = getPixelColor(e);
-    if (color === '255,255,0') {
-        closeBook();
-    }
-    // otherwise do nothing while book is open
-});
+// Overlay is click-through; scene handles clicks while book is open
 
 // Resize handler: keep mask canvas, highlight margins, items and overlay synced to the background
 window.addEventListener('resize', () => {
