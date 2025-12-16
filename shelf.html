@@ -161,10 +161,19 @@ function syncHighlightsToScene() {
     });
 }
 
-// Position and scale arbitrary .item elements relative to the scene image or overlay when book is open
+// Position and scale arbitrary .item elements relative to an inset content area inside the scene or overlay
 function positionItems() {
     // anchor to the overlay when the book is open, otherwise to the scene
     const rect = (bookOpen && bookOverlay.getBoundingClientRect().width) ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
+
+    // Define safe inset so items don't drift into image margins/letterboxing
+    const insetX = rect.width * 0.06; // 6% inset left/right
+    const insetY = rect.height * 0.08; // 8% inset top/bottom
+
+    const contentLeft = rect.left + insetX;
+    const contentTop = rect.top + insetY;
+    const contentWidth = Math.max(0, rect.width - insetX * 2);
+    const contentHeight = Math.max(0, rect.height - insetY * 2);
 
     // only position items that are visible (inside the currently displayed page) when pages exist
     let items = [];
@@ -177,8 +186,8 @@ function positionItems() {
     items.forEach(el => {
         const x = parseFloat(el.dataset.x) || 50;
         const y = parseFloat(el.dataset.y) || 50;
-        const px = rect.left + rect.width * (x / 100);
-        const py = rect.top + rect.height * (y / 100);
+        const px = contentLeft + contentWidth * (x / 100);
+        const py = contentTop + contentHeight * (y / 100);
         el.style.left = px + 'px';
         el.style.top = py + 'px';
         el.style.transform = 'translate(-50%, -50%)';
@@ -187,9 +196,14 @@ function positionItems() {
 
 function scaleItems() {
     // anchor scale to the overlay when open, otherwise to the scene
-    const rect = (bookOpen && bookOverlay.naturalWidth) ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
-    const natural = (bookOpen && bookOverlay.naturalWidth) ? bookOverlay.naturalWidth : scene.naturalWidth || rect.width;
-    const scale = natural ? (rect.width / natural) : 1;
+    const rect = (bookOpen && bookOverlay.getBoundingClientRect().width) ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
+
+    const insetX = rect.width * 0.06; // match positioning inset
+    const contentWidth = Math.max(0, rect.width - insetX * 2);
+
+    // use scene/overlay natural width scaled to contentWidth for font scaling
+    const natural = (bookOpen && bookOverlay.naturalWidth) ? bookOverlay.naturalWidth : (scene.naturalWidth || rect.width);
+    const scale = natural ? (contentWidth / natural) : 1;
 
     let items = [];
     if (pages && pages.length) {
@@ -201,7 +215,7 @@ function scaleItems() {
     items.forEach(el => {
         const w = el.dataset.w ? parseFloat(el.dataset.w) : NaN;
         if (!isNaN(w)) {
-            el.style.width = (rect.width * (w / 100)) + 'px';
+            el.style.width = (contentWidth * (w / 100)) + 'px';
             el.style.height = 'auto';
         }
         const fs = el.dataset.size ? parseFloat(el.dataset.size) : NaN;
