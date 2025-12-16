@@ -14,8 +14,12 @@
     .item {
         position: absolute;
         z-index: 4;
+        display: block;
         transform: translate(-50%, -50%);
         pointer-events: none; /* set to auto if you want items clickable */
+        object-fit: contain;
+        max-height: 100%;
+        max-width: none; /* we'll size explicitly via JS */
     }
 
     /* Full-screen book overlay (hidden by default) */
@@ -223,8 +227,12 @@ function closeBook() {
     closePages();
 }
 
-mask.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); });
-if (mask.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); }
+mask.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); });
+if (mask.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); }
+
+// Also run when the scene image is ready, similar to board.html behavior
+scene.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); });
+if (scene.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); }
 
 function getPixelColor(e) {
     const rect = scene.getBoundingClientRect();
@@ -233,6 +241,22 @@ function getPixelColor(e) {
     if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return "0,0,0";
     const pixel = ctx.getImageData(x, y, 1, 1).data;
     return `${pixel[0]},${pixel[1]},${pixel[2]}`;
+}
+
+// Ensure item images trigger rescaling when their image data is available
+function attachItemLoadHandlers() {
+    document.querySelectorAll('.item').forEach(img => {
+        img.addEventListener('load', () => {
+            // scale and position when assets are ready
+            positionItems();
+            scaleItems();
+        });
+        // if already loaded, make sure sizing is applied
+        if (img.complete) {
+            positionItems();
+            scaleItems();
+        }
+    });
 }
 
 scene.addEventListener('mousemove', (e) => {
