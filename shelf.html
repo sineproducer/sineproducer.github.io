@@ -18,14 +18,23 @@ body {
 
 #scene-wrapper {
   position: relative;
-  display: inline-block;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000; /* fills the unused space */
 }
 
 #scene {
-  display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  background-image: url('bookshelf.png');
+  background-size: contain;     /* ✅ keeps entire shelf visible */
+  background-position: center;  /* ✅ centers it */
+  background-repeat: no-repeat; /* ✅ no tiling */
 }
+
 
 #mask {
   display: none;
@@ -83,13 +92,12 @@ body {
 <body>
 
 <div id="scene-wrapper">
-
-    <img id="scene" src="bookshelf.png">
+    <div id="scene"></div>
     <img id="mask" src="bookshelf_mask.png">
-
     <img id="hiBook" class="highlight" src="highlight_blue.png">
     <img id="hiBack" class="highlight" src="highlight_yellow.png">
 
+    <!-- book, pages, etc. -->
     <div id="book">
         <img id="bookImage" src="book1.png">
 
