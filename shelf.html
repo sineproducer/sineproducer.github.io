@@ -6,46 +6,50 @@
 <title>Shelf</title>
 
 <style>
+/* Center the shelf exactly like the board HTML */
 body {
   margin: 0;
   padding: 0;
   background: #000;
   display: flex;
-  align-items: center;   /* vertical centering */
-  justify-content: center; /* horizontal centering */
-  height: 100vh; /* ensures full viewport height for vertical centering */
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
 }
 
+/* Wrapper that centers the shelf image */
 #scene-wrapper {
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000; /* fills the unused space */
 }
 
+/* Shelf image behaves like background-size: contain */
 #scene {
-  width: 100%;
-  height: 100%;
-  background-image: url('bookshelf.png');
-  background-size: contain;     /* ✅ keeps entire shelf visible */
-  background-position: center;  /* ✅ centers it */
-  background-repeat: no-repeat; /* ✅ no tiling */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
 }
 
-
-#mask {
+/* Clickmap (hidden but used for hit detection) */
+#bookshelfclickmap {
   display: none;
 }
 
-.highlight {
+/* Two highlight overlays */
+#highlightBlue,
+#highlightYellow {
   position: absolute;
   pointer-events: none;
   opacity: 0;
 }
 
+/* Book container */
 #book {
   position: absolute;
   top: 0;
@@ -56,18 +60,21 @@ body {
   transition: opacity 0.3s ease;
 }
 
+/* Book image */
 #bookImage {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
+/* Pages container */
 #pages {
   position: absolute;
   top: 0;
   left: 0;
 }
 
+/* Individual pages */
 .page {
   position: absolute;
   top: 0;
@@ -75,10 +82,12 @@ body {
   display: none;
 }
 
+/* Page items */
 .item {
   position: absolute;
 }
 
+/* Page counter */
 #pageCounter {
   position: absolute;
   bottom: 2%;
@@ -92,17 +101,24 @@ body {
 <body>
 
 <div id="scene-wrapper">
-    <div id="scene"></div>
-    <img id="mask" src="bookshelf_mask.png">
-    <img id="hiBook" class="highlight" src="highlight_blue.png">
-    <img id="hiBack" class="highlight" src="highlight_yellow.png">
 
-    <!-- book, pages, etc. -->
+    <!-- ✅ Shelf image (real <img>) -->
+    <img id="scene" src="bookshelf.png">
+
+    <!-- ✅ Single clickmap -->
+    <img id="bookshelfclickmap" src="bookshelfclickmap.png">
+
+    <!-- ✅ Two highlight overlays -->
+    <img id="highlightBlue" src="HIbook1.png">
+    <img id="highlightYellow" src="HiBack.png">
+
+    <!-- ✅ Book -->
     <div id="book">
         <img id="bookImage" src="book1.png">
 
         <div id="pages">
 
+            <!-- Page 1 -->
             <div class="page">
                 <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="15" data-w="20">
                 <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="65" data-w="20">
@@ -110,6 +126,7 @@ body {
                 <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="65" data-w="20">
             </div>
 
+            <!-- Page 2 -->
             <div class="page">
                 <img class="item" src="page2_img1.png" data-x="19" data-y="15" data-w="20">
                 <img class="item" src="page2_img2.png" data-x="19" data-y="65" data-w="20">
@@ -129,9 +146,10 @@ body {
    DOM references
 --------------------------------------------------------- */
 const scene = document.getElementById("scene");
-const mask = document.getElementById("mask");
-const hiBook = document.getElementById("hiBook");
-const hiBack = document.getElementById("hiBack");
+const mask = document.getElementById("bookshelfclickmap");
+
+const hiBlue = document.getElementById("highlightBlue");
+const hiYellow = document.getElementById("highlightYellow");
 
 const book = document.getElementById("book");
 const bookImage = document.getElementById("bookImage");
@@ -223,7 +241,7 @@ function layoutItems() {
 
 function syncHighlights() {
     const rect = scene.getBoundingClientRect();
-    [hiBook, hiBack].forEach(h => {
+    [hiBlue, hiYellow].forEach(h => {
         h.style.left = rect.left + "px";
         h.style.top = rect.top + "px";
         h.style.width = rect.width + "px";
@@ -238,25 +256,32 @@ function refresh() {
 }
 
 /* ---------------------------------------------------------
-   Click handling
+   Hover highlight logic
 --------------------------------------------------------- */
 scene.addEventListener("mousemove", e => {
     const c = getMaskColor(e);
 
+    // reset both
+    hiBlue.style.opacity = 0;
+    hiYellow.style.opacity = 0;
+
     if (bookOpen) {
-        hiBook.style.opacity = 0;
-        hiBack.style.opacity = c === "255,255,0" ? 1 : 0;
+        // only yellow works when book is open
+        if (c === "255,255,0") hiYellow.style.opacity = 1;
     } else {
-        hiBook.style.opacity = c === "0,0,255" ? 1 : 0;
-        hiBack.style.opacity = c === "255,255,0" ? 1 : 0;
+        if (c === "0,0,255") hiBlue.style.opacity = 1;
+        if (c === "255,255,0") hiYellow.style.opacity = 1;
     }
 });
 
 scene.addEventListener("mouseleave", () => {
-    hiBook.style.opacity = 0;
-    hiBack.style.opacity = 0;
+    hiBlue.style.opacity = 0;
+    hiYellow.style.opacity = 0;
 });
 
+/* ---------------------------------------------------------
+   Click handling
+--------------------------------------------------------- */
 scene.addEventListener("click", e => {
     const c = getMaskColor(e);
 
@@ -279,7 +304,9 @@ scene.addEventListener("click", e => {
     }
 });
 
-
+/* ---------------------------------------------------------
+   Init
+--------------------------------------------------------- */
 window.addEventListener("load", () => {
     drawMask();
     refresh();
