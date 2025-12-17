@@ -202,17 +202,23 @@ function positionItems() {
         const x = parseFloat(el.dataset.x) || 50;
         const y = parseFloat(el.dataset.y) || 50;
         const px = contentLeft + contentWidth * (x / 100);
-        const py = contentTop + contentHeight * (y / 100);
+        // Set horizontal centered; vertical will be adjusted after scaling (so it accounts for element height)
         el.style.left = px + 'px';
-        el.style.top = py + 'px';
-        el.style.transform = 'translate(-50%, -50%)';
+        // provisional top (kept for immediate layout before scale runs)
+        el.style.top = (contentTop + contentHeight * (y / 100)) + 'px';
+        // keep translate only on X so top aligns as expected when we adjust for element height
+        el.style.transform = 'translate(-50%, 0)';
     });
 }
 
 function scaleItems() {
     const rect = sceneWrapper.getBoundingClientRect();
     const insetX = rect.width * 0.06; // match positioning inset
+    const insetY = rect.height * 0.08;
+    const contentLeft = 0 + insetX;
+    const contentTop = 0 + insetY;
     const contentWidth = Math.max(0, rect.width - insetX * 2);
+    const contentHeight = Math.max(0, rect.height - insetY * 2);
 
     // use scene/overlay natural width scaled to contentWidth for font scaling
     const natural = (bookOpen && bookOverlay.naturalWidth) ? bookOverlay.naturalWidth : (scene.naturalWidth || rect.width);
@@ -235,6 +241,17 @@ function scaleItems() {
         if (!isNaN(fs)) {
             el.style.fontSize = (fs * scale) + 'px';
         }
+
+        // Now that size is applied, measure height and position vertically taking element height into account.
+        const y = parseFloat(el.dataset.y) || 50;
+        const elRect = el.getBoundingClientRect();
+        const elH = elRect.height;
+        // Position top so that y=0 places element's top at contentTop,
+        // and y=100 places element's bottom at contentTop+contentHeight.
+        const top = contentTop + Math.max(0, contentHeight - elH) * (y / 100);
+        el.style.top = top + 'px';
+        // Keep horizontal centered
+        el.style.transform = 'translate(-50%, 0)';
     });
 }
 
