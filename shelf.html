@@ -37,8 +37,11 @@
         object-fit: contain;
     }
 
-    /* Pages inside the book */
-    #bookPages { position:absolute; inset:0; pointer-events:none; z-index: 3; opacity:1; }
+    /* Scene wrapper matches visible image area and clips its contents (no overflow into margins) */
+    #sceneWrapper { position:absolute; left:0; top:0; width:0; height:0; overflow:hidden; pointer-events:none; z-index:3; }
+
+    /* Pages inside the wrapper */
+    #bookPages { position:absolute; inset:0; pointer-events:none; z-index:inherit; opacity:1; }
     .page { display:none; position:absolute; inset:0; }
     .page .item { pointer-events:none; }
 
@@ -70,22 +73,25 @@
     <!-- Book overlay (opens full scene when book is clicked) -->
     <img id="bookOverlay" class="layer" src="book1.png">
 
-    <!-- Book pages: each .page contains 4 positioned .item images -->
-    <div id="bookPages">
-        <div class="page">
-            <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="15" data-w="20">
-            <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="65" data-w="20">
-            <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="15" data-w="20">
-            <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="65" data-w="20">
-        </div>
-        <div class="page">
-            <img class="item" src="page2_img1.png" data-x="19" data-y="15" data-w="20">
-            <img class="item" src="page2_img2.png" data-x="19" data-y="65" data-w="20">
-            <img class="item" src="page2_img3.png" data-x="81" data-y="15" data-w="20">
-            <img class="item" src="page2_img4.png" data-x="81" data-y="65" data-w="20">
-        </div>
+    <!-- Scene wrapper: sized to the visible scene/overlay and clips pages -->
+    <div id="sceneWrapper">
+        <!-- Book pages: each .page contains 4 positioned .item images -->
+        <div id="bookPages">
+            <div class="page">
+                <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="15" data-w="20">
+                <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="65" data-w="20">
+                <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="15" data-w="20">
+                <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="65" data-w="20">
+            </div>
+            <div class="page">
+                <img class="item" src="page2_img1.png" data-x="19" data-y="15" data-w="20">
+                <img class="item" src="page2_img2.png" data-x="19" data-y="65" data-w="20">
+                <img class="item" src="page2_img3.png" data-x="81" data-y="15" data-w="20">
+                <img class="item" src="page2_img4.png" data-x="81" data-y="65" data-w="20">
+            </div>
 
-        <div id="pageCounter">Page 1</div>
+            <div id="pageCounter">Page 1</div>
+        </div>
     </div>
 
 </div>
@@ -161,17 +167,26 @@ function syncHighlightsToScene() {
     });
 }
 
-// Position and scale arbitrary .item elements relative to an inset content area inside the scene or overlay
+// Scene wrapper syncing: size/position the wrapper to the visible image area (scene or overlay)
+const sceneWrapper = document.getElementById('sceneWrapper');
+function syncSceneWrapper(full = false) {
+    const rect = full && bookOverlay.getBoundingClientRect().width ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
+    sceneWrapper.style.left = rect.left + 'px';
+    sceneWrapper.style.top = rect.top + 'px';
+    sceneWrapper.style.width = rect.width + 'px';
+    sceneWrapper.style.height = rect.height + 'px';
+}
+
+// Position and scale arbitrary .item elements relative to an inset content area inside the sceneWrapper
 function positionItems() {
-    // anchor to the overlay when the book is open, otherwise to the scene
-    const rect = (bookOpen && bookOverlay.getBoundingClientRect().width) ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
+    const rect = sceneWrapper.getBoundingClientRect();
 
     // Define safe inset so items don't drift into image margins/letterboxing
     const insetX = rect.width * 0.06; // 6% inset left/right
     const insetY = rect.height * 0.08; // 8% inset top/bottom
 
-    const contentLeft = rect.left + insetX;
-    const contentTop = rect.top + insetY;
+    const contentLeft = 0 + insetX; // relative to wrapper (we'll position absolutely inside wrapper)
+    const contentTop = 0 + insetY;
     const contentWidth = Math.max(0, rect.width - insetX * 2);
     const contentHeight = Math.max(0, rect.height - insetY * 2);
 
@@ -195,9 +210,7 @@ function positionItems() {
 }
 
 function scaleItems() {
-    // anchor scale to the overlay when open, otherwise to the scene
-    const rect = (bookOpen && bookOverlay.getBoundingClientRect().width) ? bookOverlay.getBoundingClientRect() : scene.getBoundingClientRect();
-
+    const rect = sceneWrapper.getBoundingClientRect();
     const insetX = rect.width * 0.06; // match positioning inset
     const contentWidth = Math.max(0, rect.width - insetX * 2);
 
@@ -245,27 +258,34 @@ function syncBookOverlayToScene(full = true) {
 
 function openBook() {
     syncBookOverlayToScene(true);
+    syncSceneWrapper(true);
     bookOverlay.style.opacity = '1';
     // overlay is click-through so scene receives clicks; still show overlay visually
     bookOverlay.style.pointerEvents = 'none';
     bookOpen = true;
     openPages();
+    positionItems();
+    scaleItems();
 }
 
 function closeBook() {
     syncBookOverlayToScene(false);
+    syncSceneWrapper(false);
     bookOverlay.style.opacity = '0';
     bookOverlay.style.pointerEvents = 'none';
     bookOpen = false;
     closePages();
+    positionItems();
+    scaleItems();
 }
 
-mask.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); });
-if (mask.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); }
+
+mask.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); syncSceneWrapper(false); attachItemLoadHandlers(); });
+if (mask.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); syncSceneWrapper(false); attachItemLoadHandlers(); }
 
 // Also run when the scene image is ready, similar to board.html behavior
-scene.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); });
-if (scene.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); attachItemLoadHandlers(); }
+scene.addEventListener('load', () => { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); syncSceneWrapper(false); attachItemLoadHandlers(); });
+if (scene.complete) { drawMaskToCanvas(); syncHighlightsToScene(); positionItems(); scaleItems(); syncBookOverlayToScene(false); syncSceneWrapper(false); attachItemLoadHandlers(); }
 
 function getPixelColor(e) {
     const rect = scene.getBoundingClientRect();
@@ -346,15 +366,21 @@ scene.addEventListener('click', (e) => {
 window.addEventListener('resize', () => {
     drawMaskToCanvas();
     syncHighlightsToScene();
+    if (bookOpen) {
+        syncBookOverlayToScene(true);
+        syncSceneWrapper(true);
+    } else {
+        syncSceneWrapper(false);
+    }
     positionItems();
     scaleItems();
-    if (bookOpen) syncBookOverlayToScene(true);
 });
 
 // Ensure layout is correct on initial load
 window.addEventListener('load', () => {
     drawMaskToCanvas();
     syncHighlightsToScene();
+    syncSceneWrapper(bookOpen);
     positionItems();
     scaleItems();
     syncBookOverlayToScene(false);
