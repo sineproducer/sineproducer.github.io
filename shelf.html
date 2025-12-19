@@ -1,304 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta charset="UTF-8">
+<title>Interactive Bookshelf</title>
 <style>
-/* The viewport is the bounding box for the shelf */
-body {
-  margin: 0;
-  padding: 0;
-  background: #000;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-}
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: black;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    }
 
-/* Wrapper fills the viewport and centers the shelf */
-#scene-wrapper {
-  width: 100vw;
-  height: 100vh;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-}
+    #container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        width: 100%;
+        background: black;
+        position: relative;
+    }
 
-/* Shelf image behaves EXACTLY like background-size: contain */
-#scene {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
+    .layer {
+        position: absolute;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        user-select: none;
+        -webkit-user-drag: none;
+    }
 
-/* Clickmap (hidden but used for hit detection) */
-#bookshelfclickmap {
-  display: none;
-}
-
-/* Two highlight overlays */
-#highlightBlue,
-#highlightYellow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0;
-}
-
-/* Book container overlays the shelf */
-#book {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-/* Book image */
-#bookImage {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/* Pages container */
-#pages {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-/* Individual pages */
-.page {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: none;
-}
-
-/* Page items */
-.item {
-  position: absolute;
-}
-
-/* Page counter */
-#pageCounter {
-  position: absolute;
-  bottom: 2%;
-  right: 3%;
-  color: white;
-  font-size: 20px;
-}
+    .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 2;
+    }
 </style>
 </head>
-
 <body>
 
-<div id="scene-wrapper">
-
-    <!-- ✅ Shelf image -->
-    <img id="scene" src="bookshelf.png">
-
-    <!-- ✅ Single clickmap -->
-    <img id="bookshelfclickmap" src="bookshelfclickmap.png">
-
-    <!-- ✅ Two highlight overlays -->
-    <img id="highlightBlue" src="HIbook1.png">
-    <img id="highlightYellow" src="HiBack.png">
-
-    <!-- ✅ Book -->
-    <div id="book">
-        <img id="bookImage" src="book1.png">
-
-        <div id="pages">
-
-            <!-- Page 1 -->
-            <div class="page">
-                <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="15" data-w="20">
-                <img class="item" src="CorkboardArchive1.png" data-x="19" data-y="65" data-w="20">
-                <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="15" data-w="20">
-                <img class="item" src="CorkboardArchive1.png" data-x="81" data-y="65" data-w="20">
-            </div>
-
-            <!-- Page 2 -->
-            <div class="page">
-                <img class="item" src="page2_img1.png" data-x="19" data-y="15" data-w="20">
-                <img class="item" src="page2_img2.png" data-x="19" data-y="65" data-w="20">
-                <img class="item" src="page2_img3.png" data-x="81" data-y="15" data-w="20">
-                <img class="item" src="page2_img4.png" data-x="81" data-y="65" data-w="20">
-            </div>
-
-        </div>
-
-        <div id="pageCounter">Page 1</div>
-    </div>
-
+<div id="container">
+    <img id="scene" class="layer" src="bookshelf.png" alt="Bookshelf">
+    <img id="mask" class="layer" src="bookshelfclickmap.png" style="display:none;" alt="Mask">
+        <img id="highlightback" class="layer overlay" src="HiBack.png" alt="Highlight Back">
+    <img id="highlightbook1" class="layer overlay" src="HIbook1.png" alt="Highlight Book 1">
 </div>
 
 <script>
-/* ---------------------------------------------------------
-   DOM references
---------------------------------------------------------- */
 const scene = document.getElementById("scene");
-const mask = document.getElementById("bookshelfclickmap");
+const mask = document.getElementById("mask");
 
-const hiBlue = document.getElementById("highlightBlue");
-const hiYellow = document.getElementById("highlightYellow");
+const highlightback = document.getElementById("highlightback");
+const highlightbook1 = document.getElementById("highlightbook1");
 
-const book = document.getElementById("book");
-const bookImage = document.getElementById("bookImage");
-const pages = Array.from(document.querySelectorAll(".page"));
-const pageCounter = document.getElementById("pageCounter");
-
-let currentPage = 0;
-let bookOpen = false;
-
-/* ---------------------------------------------------------
-   Mask canvas
---------------------------------------------------------- */
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
 
-function drawMask() {
-    if (!mask.naturalWidth) return;
+let currentColor = "";
+
+mask.onload = () => {
     canvas.width = mask.naturalWidth;
     canvas.height = mask.naturalHeight;
     ctx.drawImage(mask, 0, 0);
-}
+};
 
-function getMaskColor(e) {
+scene.addEventListener("mousemove", (e) => {
     const rect = scene.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) * (mask.naturalWidth / rect.width));
     const y = Math.floor((e.clientY - rect.top) * (mask.naturalHeight / rect.height));
-    const p = ctx.getImageData(x, y, 1, 1).data;
-    return `${p[0]},${p[1]},${p[2]}`;
-}
 
-/* ---------------------------------------------------------
-   Page manager
---------------------------------------------------------- */
-function setPage(i) {
-    currentPage = Math.max(0, Math.min(i, pages.length - 1));
-    pages.forEach((p, idx) => p.style.display = idx === currentPage ? "block" : "none");
-    pageCounter.textContent = `Page ${currentPage + 1}`;
-    refresh();
-}
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    currentColor = `${pixel[0]},${pixel[1]},${pixel[2]}`;
 
-/* ---------------------------------------------------------
-   Book open/close
---------------------------------------------------------- */
-function openBook() {
-    bookOpen = true;
-    book.style.opacity = 1;
-    setPage(0);
-}
+    highlightback.style.opacity = 0;
+    highlightbook1.style.opacity = 0;
 
-function closeBook() {
-    bookOpen = false;
-    book.style.opacity = 0;
-    refresh();
-}
-
-/* ---------------------------------------------------------
-   Layout
---------------------------------------------------------- */
-let content = {};
-
-function computeContentArea() {
-    const rect = bookImage.getBoundingClientRect();
-    const insetX = rect.width * 0.06;
-    const insetY = rect.height * 0.08;
-
-    content = {
-        left: rect.left + insetX,
-        top: rect.top + insetY,
-        width: rect.width - insetX * 2,
-        height: rect.height - insetY * 2
-    };
-}
-
-function layoutItems() {
-    if (!bookOpen) return;
-
-    const items = pages[currentPage].querySelectorAll(".item");
-
-    items.forEach(el => {
-        const x = parseFloat(el.dataset.x) / 100;
-        const y = parseFloat(el.dataset.y) / 100;
-        const w = parseFloat(el.dataset.w) / 100;
-
-        el.style.width = content.width * w + "px";
-        el.style.left = content.left + content.width * x + "px";
-        el.style.top = content.top + content.height * y + "px";
-    });
-}
-
-function refresh() {
-    computeContentArea();
-    layoutItems();
-}
-
-/* ---------------------------------------------------------
-   Hover highlight logic
---------------------------------------------------------- */
-scene.addEventListener("mousemove", e => {
-    const c = getMaskColor(e);
-
-    hiBlue.style.opacity = 0;
-    hiYellow.style.opacity = 0;
-
-    if (bookOpen) {
-        if (c === "255,255,0") hiYellow.style.opacity = 1;
-    } else {
-        if (c === "0,0,255") hiBlue.style.opacity = 1;
-        if (c === "255,255,0") hiYellow.style.opacity = 1;
-    }
+    if (currentColor === "255,255,0") highlightback.style.opacity = 1;
+    if (currentColor === "0,0,255") highlightbook1.style.opacity = 1;
 });
 
-scene.addEventListener("mouseleave", () => {
-    hiBlue.style.opacity = 0;
-    hiYellow.style.opacity = 0;
-});
+scene.addEventListener("click", (e) => {
+    const rect = scene.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) * (mask.naturalWidth / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (mask.naturalHeight / rect.height));
 
-/* ---------------------------------------------------------
-   Click handling
---------------------------------------------------------- */
-scene.addEventListener("click", e => {
-    const c = getMaskColor(e);
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    const clickedColor = `${pixel[0]},${pixel[1]},${pixel[2]}`;
 
-    if (c === "255,255,0") {
-        if (bookOpen) closeBook();
-        else window.location.href = "index.html";
-        return;
+    if (clickedColor === "255,255,0") {
+        window.location.href = "index.html";
     }
-
-    if (!bookOpen && c === "0,0,255") {
-        openBook();
-        return;
-    }
-
-    if (bookOpen) {
-        const rect = scene.getBoundingClientRect();
-        const mid = rect.left + rect.width / 2;
-        if (e.clientX < mid) setPage(currentPage - 1);
-        else setPage(currentPage + 1);
+    if (clickedColor === "0,0,255") {
+        window.location.href = "board.html";
     }
 });
-
-/* ---------------------------------------------------------
-   Init
---------------------------------------------------------- */
-window.addEventListener("load", () => {
-    drawMask();
-    refresh();
-});
-
-window.addEventListener("resize", refresh);
 </script>
 
 </body>
